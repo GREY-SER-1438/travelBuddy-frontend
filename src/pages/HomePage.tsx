@@ -5,12 +5,15 @@ import { Link, useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { RouteCard } from "@/components/route-card"
 import { useRoutesStore } from "@/store/useRoutesStore"
+import { getShowcaseReviews } from "@/api/reviews"
 import {
   getSavedRoutes,
   removeSavedRouteById,
   saveRouteById,
 } from "@/api/saved"
+import { hasAuthToken } from "@/lib/auth"
 import { getRequestError } from "@/lib/get-request-error"
+import type { ReviewResponseDto } from "@/api/types"
 
 const stats = [
   { label: "Маршрутов", value: "240+" },
@@ -25,27 +28,6 @@ const quickStartSteps = [
   "Сохрани, опубликуй или отправь в избранное",
 ]
 
-const reviews = [
-  {
-    name: "Анна",
-    route: "Амстердам за 3 дня",
-    text: "Маршрут удобный, точки расположены логично, но времени все равно не успеть.",
-    stars: 5,
-  },
-  {
-    name: "Илья",
-    route: "Балканы на машине",
-    text: "Полезный маршрут для самостоятельной поездки, особенно понравились заметки по маршруту.",
-    stars: 5,
-  },
-  {
-    name: "Вова",
-    route: "Балканы на машине",
-    text: "Полезный маршрут для самостоятельной поездки, особенно понравились заметки по маршруту.",
-    stars: 4,
-  },
-]
-
 export default function HomePage() {
   const navigate = useNavigate()
   const routes = useRoutesStore((state) => state.routes)
@@ -55,6 +37,8 @@ export default function HomePage() {
   const routesError = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
   const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
+  const [showcaseReviews, setShowcaseReviews] = useState<ReviewResponseDto[]>([])
+  const [loadingReviews, setLoadingReviews] = useState(true)
 
   useEffect(() => {
     if ((!routesLoaded || lastCategory !== null) && !loadingRoutes) {
@@ -89,6 +73,34 @@ export default function HomePage() {
     }
   }, [])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadShowcaseReviews = async () => {
+      setLoadingReviews(true)
+      try {
+        const response = await getShowcaseReviews()
+        if (!cancelled) {
+          setShowcaseReviews(response)
+        }
+      } catch {
+        if (!cancelled) {
+          setShowcaseReviews([])
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingReviews(false)
+        }
+      }
+    }
+
+    void loadShowcaseReviews()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const availableRoutes = routes.filter((route) => route.visibility === "public")
   const featuredRoutes = (availableRoutes.length ? availableRoutes : routes).slice(
     0,
@@ -96,6 +108,11 @@ export default function HomePage() {
   )
 
   const onSaveRoute = async (routeId: number) => {
+    if (!hasAuthToken()) {
+      navigate("/login")
+      return
+    }
+
     const status = saveStatuses[routeId] || "idle"
     if (status === "saving") return
 
@@ -270,39 +287,50 @@ export default function HomePage() {
             </p>
 
             <div className="mt-4 space-y-3">
-              {reviews.map((review) => (
-                <article
-                  key={review.name}
-                  className="rounded-2xl bg-muted px-4 py-3.5"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-lg font-semibold text-foreground">
-                        {review.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {review.route}
-                      </p>
-                    </div>
+              {loadingReviews ? (
+                <p className="text-sm text-muted-foreground">Загружаем отзывы...</p>
+              ) : null}
+              {!loadingReviews && showcaseReviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Отзывов пока нет.</p>
+              ) : null}
+              {showcaseReviews.map((review) => {
+                const authorName =
+                  review.user?.username || review.user?.email || "Пользователь"
+                const routeTitle = review.route?.title || "Маршрут"
+                const stars = normalizeStars(review.rating)
 
-                    <div className="flex gap-1 text-accent">
-                      {Array.from({ length: 5 }).map((_, starIndex) => (
-                        <Star
-                          key={`${review.name}-${starIndex}`}
-                          className="size-4"
-                          strokeWidth={1.5}
-                          fill={
-                            starIndex < review.stars ? "currentColor" : "none"
-                          }
-                        />
-                      ))}
+                return (
+                  <article
+                    key={review.reviewId}
+                    className="rounded-2xl bg-muted px-4 py-3.5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-lg font-semibold text-foreground">
+                          {authorName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {routeTitle}
+                        </p>
+                      </div>
+
+                      <div className="flex gap-1 text-accent">
+                        {Array.from({ length: 5 }).map((_, starIndex) => (
+                          <Star
+                            key={`${review.reviewId}-${starIndex}`}
+                            className="size-4"
+                            strokeWidth={1.5}
+                            fill={starIndex < stars ? "currentColor" : "none"}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {review.text}
-                  </p>
-                </article>
-              ))}
+                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                      {review.comment?.trim() || "Без комментария."}
+                    </p>
+                  </article>
+                )
+              })}
             </div>
           </section>
         </div>
@@ -322,4 +350,9 @@ function formatDays(days: number | null) {
     return `${days} дня`
   }
   return `${days} дней`
+}
+
+function normalizeStars(value: number) {
+  if (!Number.isFinite(value)) return 0
+  return Math.max(0, Math.min(5, Math.round(value)))
 }

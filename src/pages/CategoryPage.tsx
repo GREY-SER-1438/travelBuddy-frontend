@@ -7,6 +7,7 @@ import {
   removeSavedRouteById,
   saveRouteById,
 } from "@/api/saved"
+import { hasAuthToken } from "@/lib/auth"
 import { getRequestError } from "@/lib/get-request-error"
 import { useRoutesStore } from "@/store/useRoutesStore"
 
@@ -65,6 +66,11 @@ export default function CategoryPage() {
   }, [category])
 
   const onSaveRoute = async (routeId: number) => {
+    if (!hasAuthToken()) {
+      navigate("/login")
+      return
+    }
+
     const status = saveStatuses[routeId] || "idle"
     if (status === "saving") return
 

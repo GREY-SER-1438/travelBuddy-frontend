@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useRef, useState, type ChangeEvent } from "react"
 import { Link } from "react-router-dom"
 import { MapPin, Trash2 } from "lucide-react"
 import { toast } from "sonner"
@@ -7,6 +7,7 @@ import {
   addCategoryToRoute,
   createRoute,
   createRoutePointByRouteId,
+  uploadRouteImage,
 } from "@/api/routes"
 import { createCategory, getCategories } from "@/api/categories"
 import { getRequestError } from "@/lib/get-request-error"
@@ -31,6 +32,8 @@ export default function PlannerPage() {
   const [points, setPoints] = useState<DraftPoint[]>([])
   const [saving, setSaving] = useState(false)
   const [savedRouteId, setSavedRouteId] = useState<number | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const resetPlannerFields = () => {
     setTitle("")
@@ -43,6 +46,10 @@ export default function PlannerPage() {
     setPointCity("")
     setPointDescription("")
     setPoints([])
+    setImageFile(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
   }
 
   const saveRoute = async (visibility: "private" | "public") => {
@@ -55,10 +62,17 @@ export default function PlannerPage() {
     setSaving(true)
 
     try {
+      let uploadedImageUrl: string | undefined
+      if (imageFile) {
+        const uploaded = await uploadRouteImage(imageFile)
+        uploadedImageUrl = uploaded.imageUrl
+      }
+
       const durationDays = calculateDurationDays(startDate, endDate)
       const route = await createRoute({
         title: normalizedTitle,
         description: shortDescription.trim() || description.trim() || undefined,
+        imageUrl: uploadedImageUrl,
         durationDays: durationDays ?? undefined,
         visibility,
       })
@@ -123,6 +137,23 @@ export default function PlannerPage() {
     setPointCountry("")
     setPointCity("")
     setPointDescription("")
+  }
+
+  const onImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      setImageFile(null)
+      return
+    }
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Можно загрузить только изображение.")
+      event.target.value = ""
+      setImageFile(null)
+      return
+    }
+
+    setImageFile(file)
   }
 
   const onRemovePoint = (pointId: number) => {
@@ -197,6 +228,24 @@ export default function PlannerPage() {
               onChange={(event) => setDescription(event.target.value)}
               className="w-full resize-none rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
             />
+
+            <div className="space-y-2">
+              <p className="text-sm font-semibold text-muted-foreground">
+                Фото маршрута
+              </p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={onImageChange}
+                className="h-11 w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-xl file:border-0 file:bg-muted file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-foreground/85"
+              />
+              <p className="text-xs text-muted-foreground">
+                {imageFile
+                  ? `Выбран файл: ${imageFile.name}`
+                  : "Файл не выбран"}
+              </p>
+            </div>
 
             <div className="flex flex-wrap gap-2.5">
               <Button

@@ -22,6 +22,11 @@ export async function getReviewsByRouteId(routeId: number) {
   return response.data
 }
 
+export async function getShowcaseReviews() {
+  const response = await instance.get<ReviewResponseDto[]>("/reviews/showcase")
+  return response.data
+}
+
 export async function updateReviewById(
   reviewId: number,
   payload: UpdateReviewPayload

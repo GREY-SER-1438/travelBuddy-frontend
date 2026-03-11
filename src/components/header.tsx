@@ -19,12 +19,7 @@ export function Header() {
         { to: "/planner", label: "Планировщик" },
         { to: "/cabinet", label: "Кабинет", end: true },
       ]
-    : [
-        { to: "/", label: "Главная", end: true },
-        { to: "/routes", label: "Маршруты" },
-        { to: "/planner", label: "Планировщик" },
-        { to: "/cabinet", label: "Кабинет" },
-      ]
+    : [{ to: "/", label: "Главная", end: true }]
 
   useEffect(() => {
     if (!isMenuOpen) return

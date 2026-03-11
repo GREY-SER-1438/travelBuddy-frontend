@@ -1,8 +1,8 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Heart } from "lucide-react"
-import { API_ORIGIN } from "@/api/config"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useRouteImageSrc } from "@/hooks/use-route-image-src"
 
 type RouteCardMetric = {
   label: string
@@ -56,8 +56,8 @@ export function RouteCard({
   onOpen,
   onSave,
 }: RouteCardProps) {
+  const normalizedImageUrl = useRouteImageSrc(imageUrl)
   const [imageError, setImageError] = useState(false)
-  const normalizedImageUrl = getImageUrl(imageUrl)
   const hasImage = Boolean(normalizedImageUrl) && !imageError
   const routeMetrics =
     metrics ??
@@ -65,6 +65,10 @@ export function RouteCard({
       { label: "Дней", value: duration },
       { label: secondaryLabel, value: secondaryValue },
     ]
+
+  useEffect(() => {
+    setImageError(false)
+  }, [normalizedImageUrl])
 
   return (
     <article
@@ -194,17 +198,4 @@ export function RouteCard({
       </div>
     </article>
   )
-}
-
-function getImageUrl(imageUrl?: string | null) {
-  if (!imageUrl) return undefined
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-    return imageUrl
-  }
-
-  if (!API_ORIGIN) return imageUrl
-
-  const normalizedPath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
-
-  return `${API_ORIGIN}${normalizedPath}`
 }

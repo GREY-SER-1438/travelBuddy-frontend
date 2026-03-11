@@ -7,7 +7,9 @@ import {
   removeSavedRouteById,
   saveRouteById,
 } from "@/api/saved"
+import { hasAuthToken } from "@/lib/auth"
 import { getRequestError } from "@/lib/get-request-error"
+import { useMeStore } from "@/store/useMeStore"
 import { useRoutesStore } from "@/store/useRoutesStore"
 
 export default function RoutesPage() {
@@ -16,6 +18,8 @@ export default function RoutesPage() {
   const loading = useRoutesStore((state) => state.loading)
   const error = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
+  const me = useMeStore((state) => state.me)
+  const currentUserId = me?.userId ?? null
 
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
@@ -71,6 +75,16 @@ export default function RoutesPage() {
   }, [routes, search])
 
   const onSaveRoute = async (routeId: number) => {
+    if (!hasAuthToken()) {
+      navigate("/login")
+      return
+    }
+
+    const route = filteredRoutes.find((item) => item.routeId === routeId)
+    if (route && currentUserId !== null && route.author.userId === currentUserId) {
+      return
+    }
+
     const status = saveStatuses[routeId] || "idle"
     if (status === "saving") return
 
@@ -175,6 +189,9 @@ export default function RoutesPage() {
                 }
                 secondaryActionDisabled={
                   getRouteSaveStatus(route.routeId) === "saving"
+                }
+                showSecondaryAction={
+                  !(currentUserId !== null && route.author.userId === currentUserId)
                 }
                 onOpen={() => navigate(`/routes/${route.routeId}`)}
                 onSave={() => void onSaveRoute(route.routeId)}

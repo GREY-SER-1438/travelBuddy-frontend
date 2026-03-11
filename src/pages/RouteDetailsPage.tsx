@@ -14,7 +14,6 @@ import {
   updateRoutePointById,
 } from "@/api/route-points"
 import { createReviewForRoute, getReviewsByRouteId } from "@/api/reviews"
-import { API_ORIGIN } from "@/api/config"
 import type {
   ReviewResponseDto,
   RoutePointResponseDto,
@@ -22,6 +21,7 @@ import type {
 } from "@/api/types"
 import { Button } from "@/components/ui/button"
 import { getRequestError } from "@/lib/get-request-error"
+import { useRouteImageSrc } from "@/hooks/use-route-image-src"
 
 export default function RouteDetailsPage() {
   const navigate = useNavigate()
@@ -125,6 +125,7 @@ export default function RouteDetailsPage() {
   const canReview = Boolean(route && !isOwnerByContext && normalizedVisibility === "public")
   const canManageOwnRoute = Boolean(route && isOwnerByContext && isPersonalRoutePage)
   const nextPointPosition = useMemo(() => getNextPointPosition(points), [points])
+  const coverImageUrl = useRouteImageSrc(route?.imageUrl)
 
   const onAddToFavorites = async () => {
     if (!route || !canFavorite) {
@@ -355,7 +356,7 @@ export default function RouteDetailsPage() {
         <section className="overflow-hidden rounded-[30px] border border-border bg-card shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
           <div className="h-[220px] sm:h-[280px]">
             <img
-              src={normalizeImageUrl(route.imageUrl)}
+              src={normalizeImageUrl(coverImageUrl)}
               alt={route.title}
               className="h-full w-full object-cover"
             />
@@ -658,17 +659,9 @@ export default function RouteDetailsPage() {
   )
 }
 
-function normalizeImageUrl(imageUrl?: string | null) {
-  if (!imageUrl) {
-    return "https://images.unsplash.com/photo-1534113414509-0eec2bfb493f?auto=format&fit=crop&w=2000&q=80"
-  }
-
-  if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
-    return imageUrl
-  }
-
-  const normalizedPath = imageUrl.startsWith("/") ? imageUrl : `/${imageUrl}`
-  return `${API_ORIGIN}${normalizedPath}`
+function normalizeImageUrl(imageUrl?: string) {
+  if (imageUrl) return imageUrl
+  return "https://images.unsplash.com/photo-1534113414509-0eec2bfb493f?auto=format&fit=crop&w=2000&q=80"
 }
 
 function formatDays(days: number | null | undefined) {
