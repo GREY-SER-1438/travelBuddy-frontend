@@ -1,6 +1,9 @@
+import { useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Star } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
 import { RouteCard } from "@/components/route-card"
+import { useRoutesStore } from "@/store/useRoutesStore"
 
 const stats = [
   { label: "Маршрутов", value: "240+" },
@@ -36,22 +39,27 @@ const reviews = [
   },
 ]
 
-const routes = [
-  {
-    title: "Турция без турагента",
-    author: "Elena",
-    duration: "3 дня",
-    country: "Турция",
-  },
-  {
-    title: "Турция без турагента",
-    author: "Elena",
-    duration: "3 дня",
-    country: "Турция",
-  },
-]
-
 export default function HomePage() {
+  const navigate = useNavigate()
+  const routes = useRoutesStore((state) => state.routes)
+  const loadingRoutes = useRoutesStore((state) => state.loading)
+  const routesLoaded = useRoutesStore((state) => state.loaded)
+  const lastCategory = useRoutesStore((state) => state.lastCategory)
+  const routesError = useRoutesStore((state) => state.error)
+  const getRoutes = useRoutesStore((state) => state.getRoutes)
+
+  useEffect(() => {
+    if ((!routesLoaded || lastCategory !== null) && !loadingRoutes) {
+      void getRoutes()
+    }
+  }, [getRoutes, lastCategory, loadingRoutes, routesLoaded])
+
+  const availableRoutes = routes.filter((route) => route.visibility === "public")
+  const featuredRoutes = (availableRoutes.length ? availableRoutes : routes).slice(
+    0,
+    4
+  )
+
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
       <div className="grid gap-4 xl:grid-cols-[1.16fr_0.92fr]">
@@ -76,20 +84,20 @@ export default function HomePage() {
 
               <div className="mt-6 flex flex-wrap gap-2.5">
                 <Button
-                  type="button"
+                  asChild
                   variant="orange"
                   size="lg"
                   className="h-12 rounded-2xl px-8 text-lg font-semibold"
                 >
-                  Построить маршрут
+                  <Link to="/planner">Построить маршрут</Link>
                 </Button>
                 <Button
-                  type="button"
+                  asChild
                   variant="transparent"
                   size="lg"
                   className="h-12 rounded-2xl px-8 text-lg font-semibold"
                 >
-                  Смотреть маршруты
+                  <Link to="/routes">Смотреть маршруты</Link>
                 </Button>
               </div>
             </div>
@@ -120,17 +128,36 @@ export default function HomePage() {
               Живой контент сразу на главной.
             </p>
 
-            <div className="mt-5 grid gap-4 sm:grid-cols-2">
-              {routes.map((item, index) => (
-                <RouteCard
-                  key={`${item.title}-${index}`}
-                  title={item.title}
-                  author={item.author}
-                  duration={item.duration}
-                  country={item.country}
-                />
-              ))}
-            </div>
+            {loadingRoutes ? (
+              <p className="mt-5 text-sm text-muted-foreground">
+                Загружаем маршруты...
+              </p>
+            ) : null}
+            {routesError ? (
+              <p className="mt-5 text-sm text-destructive">
+                Не удалось загрузить маршруты.
+              </p>
+            ) : null}
+
+            {!loadingRoutes && !routesError ? (
+              <div className="mt-5 grid gap-4 sm:grid-cols-2">
+                {featuredRoutes.map((item) => (
+                  <RouteCard
+                    key={item.routeId}
+                    title={item.title}
+                    author={item.author.username}
+                    duration={formatDays(item.durationDays)}
+                    secondaryLabel="Тип"
+                    secondaryValue={
+                      item.visibility === "public" ? "Публичный" : "Приватный"
+                    }
+                    imageUrl={item.imageUrl}
+                    description={item.description}
+                    onOpen={() => navigate(`/routes/${item.routeId}`)}
+                  />
+                ))}
+              </div>
+            ) : null}
           </section>
         </div>
 
@@ -209,4 +236,17 @@ export default function HomePage() {
       </div>
     </div>
   )
+}
+
+function formatDays(days: number | null) {
+  if (!days || days < 1) return "—"
+
+  const mod10 = days % 10
+  const mod100 = days % 100
+
+  if (mod10 === 1 && mod100 !== 11) return `${days} день`
+  if (mod10 >= 2 && mod10 <= 4 && !(mod100 >= 12 && mod100 <= 14)) {
+    return `${days} дня`
+  }
+  return `${days} дней`
 }

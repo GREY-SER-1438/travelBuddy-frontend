@@ -7,24 +7,24 @@ export interface Me {
   percent: number
 }
 
-export interface meStore {
+export interface MeStore {
   me: Me | null
   loading: boolean
   error: string | null
-  getme: () => Promise<void>
+  getMe: () => Promise<void>
 }
 
-export const usemeStore = create<meStore>((set, get) => ({
+export const useMeStore = create<MeStore>((set, get) => ({
   me: null,
   loading: false,
   error: null,
 
-  getme: async () => {
+  getMe: async () => {
     if (get().loading) return
 
     set({ loading: true, error: null })
     try {
-      const response = await instance.get<Me>("/user/me")
+      const response = await instance.get<Me>("/users/me")
       set({ loading: false, me: response.data })
     } catch (e) {
       console.error(e)
@@ -35,3 +35,6 @@ export const usemeStore = create<meStore>((set, get) => ({
     }
   },
 }))
+
+// Backward compatibility alias
+export const usemeStore = useMeStore

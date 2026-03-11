@@ -1,7 +1,13 @@
 import { Plane } from "lucide-react"
 import { Link } from "react-router-dom"
 
-const sectionLinks = ["Главная", "Маршруты", "Планировщик", "Кабинет", "Сообщество"]
+const sectionLinks = [
+  "Главная",
+  "Маршруты",
+  "Планировщик",
+  "Кабинет",
+  "Сообщество",
+]
 const featureLinks = [
   "Создание маршрутов",
   "Коллекции и избранное",
