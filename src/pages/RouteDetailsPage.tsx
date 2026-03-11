@@ -123,6 +123,30 @@ export default function RouteDetailsPage() {
     route && !isOwnerByContext && normalizedVisibility === "public"
   )
   const canReview = Boolean(route && !isOwnerByContext && normalizedVisibility === "public")
+  const hasCurrentUserReview = reviews.some((review) => {
+    if (!me || !review.user) return false
+    if (
+      typeof me.userId === "number" &&
+      typeof review.user.userId === "number" &&
+      me.userId === review.user.userId
+    ) {
+      return true
+    }
+    return Boolean(me.email && review.user.email && me.email === review.user.email)
+  })
+  const canCreateReview = canReview && !hasCurrentUserReview
+  const currentUserReview = reviews.find((review) => {
+    if (!me || !review.user) return false
+    if (
+      typeof me.userId === "number" &&
+      typeof review.user.userId === "number" &&
+      me.userId === review.user.userId
+    ) {
+      return true
+    }
+    return Boolean(me.email && review.user.email && me.email === review.user.email)
+  })
+  const reviewFormDisabled = hasCurrentUserReview || actionLoading
   const canManageOwnRoute = Boolean(route && isOwnerByContext && isPersonalRoutePage)
   const nextPointPosition = useMemo(() => getNextPointPosition(points), [points])
   const coverImageUrl = useRouteImageSrc(route?.imageUrl)
@@ -171,9 +195,9 @@ export default function RouteDetailsPage() {
   }
 
   const onCreateReview = async () => {
-    if (!route || !canReview) {
+    if (!route || !canCreateReview) {
       setActionIsError(true)
-      setActionMessage("Оставлять отзывы можно только на чужие публичные маршруты.")
+      setActionMessage("Добавлять отзыв можно только один раз на чужой публичный маршрут.")
       return
     }
     setActionLoading(true)
@@ -435,28 +459,6 @@ export default function RouteDetailsPage() {
               <p className="mt-3 text-sm text-muted-foreground sm:text-base">
                 Длительность: {formatDays(route.durationDays)}
               </p>
-
-              <div className="mt-4 space-y-2.5">
-                {reviews.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">Отзывов пока нет.</p>
-                ) : null}
-                {reviews.map((review) => (
-                  <article
-                    key={review.reviewId}
-                    className="rounded-2xl bg-muted px-4 py-3"
-                  >
-                    <p className="text-xl leading-none font-semibold text-foreground">
-                      Оценка: {review.rating}/5
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {review.user?.username || review.user?.email || "Пользователь"}
-                    </p>
-                    <p className="mt-2 text-sm text-muted-foreground">
-                      {review.comment?.trim() || "Без комментария."}
-                    </p>
-                  </article>
-                ))}
-              </div>
             </section>
           ) : null}
 
@@ -612,48 +614,99 @@ export default function RouteDetailsPage() {
                   Добавить точку
                 </Button>
               </div>
-            ) : (
-              <div className="mt-4 space-y-2">
-                {canReview ? (
-                <div className="grid gap-2 sm:grid-cols-[120px_1fr]">
-                  <select
-                    value={reviewRating}
-                    onChange={(event) => setReviewRating(Number(event.target.value))}
-                    className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                  >
-                    {[5, 4, 3, 2, 1].map((value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={reviewComment}
-                    onChange={(event) => setReviewComment(event.target.value)}
-                    placeholder="Комментарий к отзыву"
-                    className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                  />
-                </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    Отзывы можно оставлять только на чужие публичные маршруты.
-                  </p>
-                )}
-                {canReview ? (
-                  <Button
-                    variant="orange"
-                    size="headerAuth"
-                    disabled={actionLoading}
-                    onClick={() => void onCreateReview()}
-                  >
-                    Оставить отзыв
-                  </Button>
-                ) : null}
-              </div>
-            )}
+            ) : null}
           </section>
         </div>
+
+        {!isPersonalRoutePage ? (
+          <section className="rounded-[30px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-5">
+            <p className="text-sm font-semibold text-muted-foreground">Отзывы</p>
+            <h2 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
+              Что пишут о маршруте
+            </h2>
+
+            <div className="mt-4 space-y-2.5">
+              {reviews.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Отзывов пока нет.</p>
+              ) : null}
+              {reviews.map((review) => (
+                <article
+                  key={review.reviewId}
+                  className="rounded-2xl bg-muted px-4 py-3"
+                >
+                  <p className="text-xl leading-none font-semibold text-foreground">
+                    Оценка: {review.rating}/5
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {review.user?.username || review.user?.email || "Пользователь"}
+                  </p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {review.comment?.trim() || "Без комментария."}
+                  </p>
+                </article>
+              ))}
+            </div>
+
+            <div className="mt-4 space-y-2">
+              {canReview ? (
+              <div
+                className={[
+                  "grid gap-2 sm:grid-cols-[120px_1fr]",
+                  reviewFormDisabled ? "opacity-60" : "",
+                ].join(" ")}
+              >
+                <select
+                  value={
+                    hasCurrentUserReview
+                      ? (currentUserReview?.rating ?? reviewRating)
+                      : reviewRating
+                  }
+                  onChange={(event) => setReviewRating(Number(event.target.value))}
+                  disabled={reviewFormDisabled}
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed"
+                >
+                  {[5, 4, 3, 2, 1].map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={
+                    hasCurrentUserReview
+                      ? (currentUserReview?.comment ?? "")
+                      : reviewComment
+                  }
+                  onChange={(event) => setReviewComment(event.target.value)}
+                  disabled={reviewFormDisabled}
+                  placeholder="Комментарий к отзыву"
+                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20 disabled:cursor-not-allowed"
+                />
+              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Отзывы можно оставлять только на чужие публичные маршруты.
+                </p>
+              )}
+              {canReview && hasCurrentUserReview ? (
+                <p className="text-sm text-muted-foreground">
+                  Вы уже оставили отзыв на этот маршрут.
+                </p>
+              ) : null}
+              {canReview ? (
+                <Button
+                  variant="orange"
+                  size="headerAuth"
+                  disabled={reviewFormDisabled}
+                  onClick={() => void onCreateReview()}
+                >
+                  {hasCurrentUserReview ? "Отзыв добавлен" : "Оставить отзыв"}
+                </Button>
+              ) : null}
+            </div>
+          </section>
+        ) : null}
       </div>
     </div>
   )

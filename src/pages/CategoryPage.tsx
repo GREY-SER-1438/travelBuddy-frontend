@@ -16,8 +16,6 @@ export default function CategoryPage() {
   const { category = "" } = useParams()
   const routes = useRoutesStore((state) => state.routes)
   const loading = useRoutesStore((state) => state.loading)
-  const loaded = useRoutesStore((state) => state.loaded)
-  const lastCategory = useRoutesStore((state) => state.lastCategory)
   const error = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
   const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
@@ -26,10 +24,8 @@ export default function CategoryPage() {
     const normalizedCategory = category.trim()
     if (!normalizedCategory) return
 
-    if ((!loaded || lastCategory !== normalizedCategory) && !loading) {
-      void getRoutes(normalizedCategory)
-    }
-  }, [category, getRoutes, lastCategory, loaded, loading])
+    void getRoutes(normalizedCategory)
+  }, [category, getRoutes])
 
   useEffect(() => {
     let cancelled = false

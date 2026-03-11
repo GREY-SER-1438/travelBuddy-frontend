@@ -39,7 +39,6 @@ export const useRoutesStore = create<RoutesStore>((set, get) => ({
     const state = get()
 
     if (state.loading) return
-    if (state.loaded && state.lastCategory === normalizedCategory) return
 
     set({ loading: true, error: null })
 

@@ -32,8 +32,6 @@ export default function HomePage() {
   const navigate = useNavigate()
   const routes = useRoutesStore((state) => state.routes)
   const loadingRoutes = useRoutesStore((state) => state.loading)
-  const routesLoaded = useRoutesStore((state) => state.loaded)
-  const lastCategory = useRoutesStore((state) => state.lastCategory)
   const routesError = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
   const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
@@ -41,10 +39,10 @@ export default function HomePage() {
   const [loadingReviews, setLoadingReviews] = useState(true)
 
   useEffect(() => {
-    if ((!routesLoaded || lastCategory !== null) && !loadingRoutes) {
+    if (!loadingRoutes) {
       void getRoutes()
     }
-  }, [getRoutes, lastCategory, loadingRoutes, routesLoaded])
+  }, [getRoutes, loadingRoutes])
 
   useEffect(() => {
     let cancelled = false
