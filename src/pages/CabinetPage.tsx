@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useState, type FormEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { RouteCard } from "@/components/route-card"
 import { Button } from "@/components/ui/button"
@@ -77,11 +77,6 @@ export default function CabinetPage() {
       cancelled = true
     }
   }, [])
-
-  const userInitials = useMemo(() => {
-    const source = username.trim() || email.trim() || "TB"
-    return source.slice(0, 2).toUpperCase()
-  }, [email, username])
 
   const onSaveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -165,81 +160,56 @@ export default function CabinetPage() {
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
       <div className="space-y-4">
-        <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-          <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-            <div className="flex items-start gap-3">
-              <span className="mt-1 flex size-12 shrink-0 items-center justify-center rounded-full bg-muted text-lg font-bold text-muted-foreground">
-                {userInitials}
-              </span>
+        <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
+          <p className="text-sm font-semibold text-muted-foreground">Клиент</p>
+          <h1 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
+            Профиль и настройки
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+            Панель данных и параметры аккаунта в одном разделе.
+          </p>
 
-              <div className="min-w-0">
-                <h2 className="text-[1.8rem] leading-none font-bold text-foreground">
-                  {username || "Пользователь"}
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">Путешественник</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    Сохранено: {savedRoutes.length}
-                  </span>
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-xs text-muted-foreground">
-                    Категорий: {categories.length}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-            <p className="text-sm font-semibold text-muted-foreground">Клиент</p>
-            <h1 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
-              Профиль и настройки
-            </h1>
-            <p className="mt-2 text-sm text-muted-foreground sm:text-base">
-              Панель данных и параметры аккаунта в одном разделе.
-            </p>
-
-            <form className="mt-4 space-y-3" onSubmit={onSaveProfile}>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <input
-                  type="text"
-                  placeholder="Имя"
-                  value={username}
-                  onChange={(event) => setUsername(event.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                />
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                />
-              </div>
-
+          <form className="mt-4 space-y-3" onSubmit={onSaveProfile}>
+            <div className="grid gap-3 sm:grid-cols-2">
               <input
-                type="password"
-                placeholder="Новый пароль (опционально)"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                type="text"
+                placeholder="Имя"
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
               />
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+              />
+            </div>
 
-              <Button
-                type="submit"
-                variant="orange"
-                disabled={savingProfile}
-                className="h-9 rounded-xl px-4 text-sm font-semibold"
-              >
-                Сохранить изменения
-              </Button>
-            </form>
+            <input
+              type="password"
+              placeholder="Новый пароль (опционально)"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+            />
 
-            {requestError ? (
-              <p className="mt-2 text-sm text-destructive">{requestError}</p>
-            ) : null}
-            {message ? <p className="mt-2 text-sm text-emerald-700">{message}</p> : null}
-          </section>
-        </div>
+            <Button
+              type="submit"
+              variant="orange"
+              disabled={savingProfile}
+              className="h-9 rounded-xl px-4 text-sm font-semibold"
+            >
+              Сохранить изменения
+            </Button>
+          </form>
+
+          {requestError ? (
+            <p className="mt-2 text-sm text-destructive">{requestError}</p>
+          ) : null}
+          {message ? <p className="mt-2 text-sm text-emerald-700">{message}</p> : null}
+        </section>
 
         <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
           <p className="text-sm font-semibold text-muted-foreground">Переходы</p>
