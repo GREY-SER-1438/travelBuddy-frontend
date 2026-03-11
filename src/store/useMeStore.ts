@@ -1,14 +1,10 @@
 import { create } from "zustand"
-import { instance } from "@/api/instance"
-
-export interface Me {
-  count_users: number
-  id: number
-  percent: number
-}
+import { getCurrentUserProfile } from "@/api/users"
+import type { JwtUserDto } from "@/api/types"
+import { getRequestError } from "@/lib/get-request-error"
 
 export interface MeStore {
-  me: Me | null
+  me: JwtUserDto | null
   loading: boolean
   error: string | null
   getMe: () => Promise<void>
@@ -24,13 +20,12 @@ export const useMeStore = create<MeStore>((set, get) => ({
 
     set({ loading: true, error: null })
     try {
-      const response = await instance.get<Me>("/users/me")
-      set({ loading: false, me: response.data })
-    } catch (e) {
-      console.error(e)
+      const me = await getCurrentUserProfile()
+      set({ loading: false, me })
+    } catch (error) {
       set({
         loading: false,
-        error: e instanceof Error ? e.message : "Ошибка загрузки",
+        error: getRequestError(error),
       })
     }
   },

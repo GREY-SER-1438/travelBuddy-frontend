@@ -1,72 +1,114 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
-import { Link, useNavigate } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { RouteCard } from "@/components/route-card"
-import { Button } from "@/components/ui/button"
+import {
+  getSavedRoutes,
+  removeSavedRouteById,
+  saveRouteById,
+} from "@/api/saved"
+import { getRequestError } from "@/lib/get-request-error"
 import { useRoutesStore } from "@/store/useRoutesStore"
 
 export default function RoutesPage() {
   const navigate = useNavigate()
   const routes = useRoutesStore((state) => state.routes)
   const loading = useRoutesStore((state) => state.loading)
-  const loaded = useRoutesStore((state) => state.loaded)
-  const lastCategory = useRoutesStore((state) => state.lastCategory)
   const error = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
 
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
+  const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
 
   useEffect(() => {
-    if ((!loaded || lastCategory !== null) && !loading) {
-      void getRoutes()
+    if (loading) return
+
+    const timerId = setTimeout(() => {
+      void getRoutes(category.trim() || undefined)
+    }, 350)
+
+    return () => clearTimeout(timerId)
+  }, [category, getRoutes, loading])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSavedRoutes = async () => {
+      try {
+        const savedRoutes = await getSavedRoutes()
+        if (cancelled) return
+
+        setSaveStatuses((prev) => {
+          const next: Record<number, "idle" | "saving" | "saved"> = { ...prev }
+          savedRoutes.forEach((item) => {
+            next[item.route.routeId] = "saved"
+          })
+          return next
+        })
+      } catch {
+        // For guests / network issues keep default "idle" state.
+      }
     }
-  }, [getRoutes, lastCategory, loaded, loading])
+
+    void loadSavedRoutes()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const filteredRoutes = useMemo(() => {
     const query = search.trim().toLowerCase()
-    if (!query) return routes
+    const publicRoutes = routes.filter(
+      (route) => route.visibility?.toLowerCase() === "public"
+    )
+    if (!query) return publicRoutes
 
-    return routes.filter((route) =>
+    return publicRoutes.filter((route) =>
       route.title.toLowerCase().includes(query)
     )
   }, [routes, search])
 
-  const onFilterSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    await getRoutes(category.trim() || undefined)
+  const onSaveRoute = async (routeId: number) => {
+    const status = saveStatuses[routeId] || "idle"
+    if (status === "saving") return
+
+    setSaveStatuses((prev) => ({ ...prev, [routeId]: "saving" }))
+    try {
+      if (status === "saved") {
+        await removeSavedRouteById(routeId)
+        setSaveStatuses((prev) => ({ ...prev, [routeId]: "idle" }))
+        toast.success("Маршрут удален из сохраненных.")
+      } else {
+        await saveRouteById(routeId)
+        setSaveStatuses((prev) => ({ ...prev, [routeId]: "saved" }))
+        toast.success("Маршрут сохранен.")
+      }
+    } catch (error) {
+      setSaveStatuses((prev) => ({ ...prev, [routeId]: status }))
+      toast.error(getRequestError(error))
+    }
   }
 
-  const onResetFilters = async () => {
-    setCategory("")
-    setSearch("")
-    await getRoutes()
-  }
+  const getRouteSaveStatus = (routeId: number) => saveStatuses[routeId] || "idle"
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
       <section className="rounded-[26px] border border-border bg-card p-6 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-sm font-semibold text-muted-foreground">
-              Просмотр контента
-            </p>
-            <h1 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
-              Каталог маршрутов
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground sm:text-lg">
-              Просмотр, поиск и переход к конкретному маршруту.
-            </p>
-          </div>
-
-          <Button type="button" variant="orange" size="headerAuth">
-            Опубликовать
-          </Button>
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">
+            Просмотр контента
+          </p>
+          <h1 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
+            Каталог маршрутов
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground sm:text-lg">
+            Просмотр и фильтрация маршрутов.
+          </p>
         </div>
 
-        <form
-          className="mt-6 grid gap-3 md:grid-cols-[1fr_280px_auto_auto]"
-          onSubmit={onFilterSubmit}
-        >
+        <div className="mt-6 grid gap-3 md:grid-cols-[1fr_280px]">
           <input
             type="search"
             placeholder="Поиск по названию"
@@ -81,33 +123,7 @@ export default function RoutesPage() {
             onChange={(event) => setCategory(event.target.value)}
             className="h-11 rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
           />
-          <Button type="submit" variant="transparent" className="h-11 px-4">
-            Применить
-          </Button>
-          <Button
-            asChild
-            variant="transparent"
-            className="h-11 px-4"
-          >
-            <Link
-              to={
-                category.trim()
-                  ? `/categories/${encodeURIComponent(category.trim())}`
-                  : "/routes"
-              }
-            >
-              Категория
-            </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="transparent"
-            className="h-11 px-4"
-            onClick={onResetFilters}
-          >
-            Сбросить
-          </Button>
-        </form>
+        </div>
 
         <div className="mt-4 text-sm text-muted-foreground">
           Найдено маршрутов:{" "}
@@ -125,7 +141,6 @@ export default function RoutesPage() {
             Не удалось загрузить маршруты.
           </p>
         ) : null}
-
         {!loading && !error && filteredRoutes.length === 0 ? (
           <p className="mt-6 text-sm text-muted-foreground">
             Маршруты не найдены.
@@ -146,7 +161,23 @@ export default function RoutesPage() {
                 }
                 imageUrl={route.imageUrl}
                 description={route.description}
+                secondaryActionLabel={
+                  getRouteSaveStatus(route.routeId) === "saved"
+                    ? "Сохранено"
+                    : getRouteSaveStatus(route.routeId) === "saving"
+                      ? "Обновляем..."
+                      : "Сохранить"
+                }
+                secondaryActionClassName={
+                  getRouteSaveStatus(route.routeId) === "saved"
+                    ? "border-[#2c475c] bg-[#2c475c] text-white hover:bg-[#243b4c] hover:text-white"
+                    : undefined
+                }
+                secondaryActionDisabled={
+                  getRouteSaveStatus(route.routeId) === "saving"
+                }
                 onOpen={() => navigate(`/routes/${route.routeId}`)}
+                onSave={() => void onSaveRoute(route.routeId)}
               />
             ))}
           </div>

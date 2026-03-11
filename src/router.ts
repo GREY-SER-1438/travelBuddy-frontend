@@ -6,6 +6,8 @@ import RegisterPage from "./pages/RegisterPage"
 import RoutesPage from "./pages/RoutesPage"
 import PlannerPage from "./pages/PlannerPage"
 import CabinetPage from "./pages/CabinetPage"
+import MyRoutesPage from "./pages/MyRoutesPage"
+import SavedRoutesPage from "./pages/SavedRoutesPage"
 import CategoryPage from "./pages/CategoryPage"
 import RouteDetailsPage from "./pages/RouteDetailsPage"
 import { RequireAuth, RequireGuest } from "@/components/auth-guards"
@@ -28,9 +30,12 @@ export const router = createBrowserRouter([
         children: [
           { path: "routes", Component: RoutesPage },
           { path: "routes/:routeId", Component: RouteDetailsPage },
+          { path: "cabinet/my-routes/:routeId", Component: RouteDetailsPage },
           { path: "categories/:category", Component: CategoryPage },
           { path: "planner", Component: PlannerPage },
           { path: "cabinet", Component: CabinetPage },
+          { path: "cabinet/my-routes", Component: MyRoutesPage },
+          { path: "cabinet/saved", Component: SavedRoutesPage },
         ],
       },
     ],

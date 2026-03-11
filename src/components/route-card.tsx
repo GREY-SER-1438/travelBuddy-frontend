@@ -16,11 +16,18 @@ type RouteCardProps = {
   secondaryLabel?: string
   secondaryValue: string
   imageUrl?: string | null
-  description?: string
+  description?: string | null
   showDescription?: boolean
   tags?: string[]
   metrics?: RouteCardMetric[]
   showFavorite?: boolean
+  showActions?: boolean
+  primaryActionLabel?: string
+  secondaryActionLabel?: string
+  secondaryActionVariant?: "orange" | "transparent"
+  secondaryActionClassName?: string
+  secondaryActionDisabled?: boolean
+  showSecondaryAction?: boolean
   className?: string
   onOpen?: () => void
   onSave?: () => void
@@ -38,6 +45,13 @@ export function RouteCard({
   tags = [],
   metrics,
   showFavorite = false,
+  showActions = true,
+  primaryActionLabel = "Открыть",
+  secondaryActionLabel = "Сохранить",
+  secondaryActionVariant = "transparent",
+  secondaryActionClassName,
+  secondaryActionDisabled = false,
+  showSecondaryAction = true,
   className,
   onOpen,
   onSave,
@@ -153,26 +167,37 @@ export function RouteCard({
           ))}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Button type="button" variant="orange" size="routeCard" onClick={onOpen}>
-            Открыть
-          </Button>
-          <Button
-            type="button"
-            variant="transparent"
-            size="routeCard"
-            onClick={onSave}
-          >
-            Сохранить
-          </Button>
-        </div>
+        {showActions ? (
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="orange"
+              size="routeCard"
+              onClick={onOpen}
+            >
+              {primaryActionLabel}
+            </Button>
+            {showSecondaryAction ? (
+              <Button
+                type="button"
+                variant={secondaryActionVariant}
+                size="routeCard"
+                className={secondaryActionClassName}
+                disabled={secondaryActionDisabled}
+                onClick={onSave}
+              >
+                {secondaryActionLabel}
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </article>
   )
 }
 
 function getImageUrl(imageUrl?: string | null) {
-  if (!imageUrl) return null
+  if (!imageUrl) return undefined
   if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
     return imageUrl
   }

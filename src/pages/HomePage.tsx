@@ -1,9 +1,16 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Star } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 import { RouteCard } from "@/components/route-card"
 import { useRoutesStore } from "@/store/useRoutesStore"
+import {
+  getSavedRoutes,
+  removeSavedRouteById,
+  saveRouteById,
+} from "@/api/saved"
+import { getRequestError } from "@/lib/get-request-error"
 
 const stats = [
   { label: "Маршрутов", value: "240+" },
@@ -47,6 +54,7 @@ export default function HomePage() {
   const lastCategory = useRoutesStore((state) => state.lastCategory)
   const routesError = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
+  const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
 
   useEffect(() => {
     if ((!routesLoaded || lastCategory !== null) && !loadingRoutes) {
@@ -54,11 +62,61 @@ export default function HomePage() {
     }
   }, [getRoutes, lastCategory, loadingRoutes, routesLoaded])
 
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSavedRoutes = async () => {
+      try {
+        const savedRoutes = await getSavedRoutes()
+        if (cancelled) return
+
+        setSaveStatuses((prev) => {
+          const next: Record<number, "idle" | "saving" | "saved"> = { ...prev }
+          savedRoutes.forEach((item) => {
+            next[item.route.routeId] = "saved"
+          })
+          return next
+        })
+      } catch {
+        // For guests / network issues keep default "idle" state.
+      }
+    }
+
+    void loadSavedRoutes()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   const availableRoutes = routes.filter((route) => route.visibility === "public")
   const featuredRoutes = (availableRoutes.length ? availableRoutes : routes).slice(
     0,
     4
   )
+
+  const onSaveRoute = async (routeId: number) => {
+    const status = saveStatuses[routeId] || "idle"
+    if (status === "saving") return
+
+    setSaveStatuses((prev) => ({ ...prev, [routeId]: "saving" }))
+    try {
+      if (status === "saved") {
+        await removeSavedRouteById(routeId)
+        setSaveStatuses((prev) => ({ ...prev, [routeId]: "idle" }))
+        toast.success("Маршрут удален из сохраненных.")
+      } else {
+        await saveRouteById(routeId)
+        setSaveStatuses((prev) => ({ ...prev, [routeId]: "saved" }))
+        toast.success("Маршрут сохранен.")
+      }
+    } catch (error) {
+      setSaveStatuses((prev) => ({ ...prev, [routeId]: status }))
+      toast.error(getRequestError(error))
+    }
+  }
+
+  const getRouteSaveStatus = (routeId: number) => saveStatuses[routeId] || "idle"
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
@@ -138,7 +196,6 @@ export default function HomePage() {
                 Не удалось загрузить маршруты.
               </p>
             ) : null}
-
             {!loadingRoutes && !routesError ? (
               <div className="mt-5 grid gap-4 sm:grid-cols-2">
                 {featuredRoutes.map((item) => (
@@ -153,7 +210,23 @@ export default function HomePage() {
                     }
                     imageUrl={item.imageUrl}
                     description={item.description}
+                    secondaryActionLabel={
+                      getRouteSaveStatus(item.routeId) === "saved"
+                        ? "Сохранено"
+                        : getRouteSaveStatus(item.routeId) === "saving"
+                          ? "Обновляем..."
+                          : "Сохранить"
+                    }
+                    secondaryActionClassName={
+                      getRouteSaveStatus(item.routeId) === "saved"
+                        ? "border-[#2c475c] bg-[#2c475c] text-white hover:bg-[#243b4c] hover:text-white"
+                        : undefined
+                    }
+                    secondaryActionDisabled={
+                      getRouteSaveStatus(item.routeId) === "saving"
+                    }
                     onOpen={() => navigate(`/routes/${item.routeId}`)}
+                    onSave={() => void onSaveRoute(item.routeId)}
                   />
                 ))}
               </div>
