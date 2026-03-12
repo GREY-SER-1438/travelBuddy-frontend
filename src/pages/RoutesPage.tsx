@@ -23,7 +23,9 @@ export default function RoutesPage() {
 
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("")
-  const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
+  const [saveStatuses, setSaveStatuses] = useState<
+    Record<number, "idle" | "saving" | "saved">
+  >({})
 
   useEffect(() => {
     if (loading) return
@@ -33,7 +35,7 @@ export default function RoutesPage() {
     }, 350)
 
     return () => clearTimeout(timerId)
-  }, [category, getRoutes, loading])
+  }, [category, getRoutes])
 
   useEffect(() => {
     let cancelled = false
@@ -81,7 +83,11 @@ export default function RoutesPage() {
     }
 
     const route = filteredRoutes.find((item) => item.routeId === routeId)
-    if (route && currentUserId !== null && route.author.userId === currentUserId) {
+    if (
+      route &&
+      currentUserId !== null &&
+      route.author.userId === currentUserId
+    ) {
       return
     }
 
@@ -105,7 +111,8 @@ export default function RoutesPage() {
     }
   }
 
-  const getRouteSaveStatus = (routeId: number) => saveStatuses[routeId] || "idle"
+  const getRouteSaveStatus = (routeId: number) =>
+    saveStatuses[routeId] || "idle"
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
@@ -128,14 +135,14 @@ export default function RoutesPage() {
             placeholder="Поиск по названию"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            className="h-11 rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+            className="h-11 rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
           />
           <input
             type="text"
             placeholder="Категория"
             value={category}
             onChange={(event) => setCategory(event.target.value)}
-            className="h-11 rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+            className="h-11 rounded-xl border border-border bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
           />
         </div>
 
@@ -147,7 +154,9 @@ export default function RoutesPage() {
         </div>
 
         {loading ? (
-          <p className="mt-6 text-sm text-muted-foreground">Загружаем маршруты...</p>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Загружаем маршруты...
+          </p>
         ) : null}
 
         {error ? (
@@ -191,7 +200,10 @@ export default function RoutesPage() {
                   getRouteSaveStatus(route.routeId) === "saving"
                 }
                 showSecondaryAction={
-                  !(currentUserId !== null && route.author.userId === currentUserId)
+                  !(
+                    currentUserId !== null &&
+                    route.author.userId === currentUserId
+                  )
                 }
                 onOpen={() => navigate(`/routes/${route.routeId}`)}
                 onSave={() => void onSaveRoute(route.routeId)}

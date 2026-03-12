@@ -34,15 +34,17 @@ export default function HomePage() {
   const loadingRoutes = useRoutesStore((state) => state.loading)
   const routesError = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
-  const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
-  const [showcaseReviews, setShowcaseReviews] = useState<ReviewResponseDto[]>([])
+  const [saveStatuses, setSaveStatuses] = useState<
+    Record<number, "idle" | "saving" | "saved">
+  >({})
+  const [showcaseReviews, setShowcaseReviews] = useState<ReviewResponseDto[]>(
+    []
+  )
   const [loadingReviews, setLoadingReviews] = useState(true)
 
   useEffect(() => {
-    if (!loadingRoutes) {
-      void getRoutes()
-    }
-  }, [getRoutes, loadingRoutes])
+    void getRoutes()
+  }, [getRoutes])
 
   useEffect(() => {
     let cancelled = false
@@ -99,11 +101,12 @@ export default function HomePage() {
     }
   }, [])
 
-  const availableRoutes = routes.filter((route) => route.visibility === "public")
-  const featuredRoutes = (availableRoutes.length ? availableRoutes : routes).slice(
-    0,
-    4
+  const availableRoutes = routes.filter(
+    (route) => route.visibility === "public"
   )
+  const featuredRoutes = (
+    availableRoutes.length ? availableRoutes : routes
+  ).slice(0, 4)
 
   const onSaveRoute = async (routeId: number) => {
     if (!hasAuthToken()) {
@@ -131,7 +134,8 @@ export default function HomePage() {
     }
   }
 
-  const getRouteSaveStatus = (routeId: number) => saveStatuses[routeId] || "idle"
+  const getRouteSaveStatus = (routeId: number) =>
+    saveStatuses[routeId] || "idle"
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-6 lg:px-8">
@@ -286,10 +290,14 @@ export default function HomePage() {
 
             <div className="mt-4 space-y-3">
               {loadingReviews ? (
-                <p className="text-sm text-muted-foreground">Загружаем отзывы...</p>
+                <p className="text-sm text-muted-foreground">
+                  Загружаем отзывы...
+                </p>
               ) : null}
               {!loadingReviews && showcaseReviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Отзывов пока нет.</p>
+                <p className="text-sm text-muted-foreground">
+                  Отзывов пока нет.
+                </p>
               ) : null}
               {showcaseReviews.map((review) => {
                 const authorName =
