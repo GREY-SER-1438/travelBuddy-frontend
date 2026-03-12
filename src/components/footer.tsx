@@ -1,4 +1,3 @@
-import { Plane } from "lucide-react"
 import { Link } from "react-router-dom"
 
 const sectionLinks = [
@@ -23,8 +22,8 @@ export function Footer() {
         <div className="grid gap-8 md:grid-cols-[minmax(280px,1.4fr)_1fr_1fr_0.8fr] md:gap-10">
           <div>
             <Link to="/" className="inline-flex items-start gap-3">
-              <span className="mt-0.5 flex size-11 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                <Plane className="size-5 rotate-45" strokeWidth={2.4} />
+              <span className="mt-0.5 flex size-11 items-center justify-center rounded-full bg-[#f59a23] text-xl font-bold text-white">
+                TB
               </span>
               <span>
                 <span className="block text-xl leading-none font-semibold tracking-[-0.02em] sm:text-2xl">

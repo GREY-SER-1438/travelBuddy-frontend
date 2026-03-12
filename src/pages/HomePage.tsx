@@ -221,7 +221,7 @@ export default function HomePage() {
                   <RouteCard
                     key={item.routeId}
                     title={item.title}
-                    author={item.author.username}
+                    author={item.author.username || item.author.email}
                     duration={formatDays(item.durationDays)}
                     secondaryLabel="Тип"
                     secondaryValue={

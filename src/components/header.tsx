@@ -14,7 +14,7 @@ export function Header() {
   const navLinks = isAuthenticated
     ? [
         { to: "/", label: "Главная", end: true },
-        { to: "/routes", label: "Маршруты" },
+        { to: "/routes", label: "Маршруты", end: true },
         { to: "/cabinet/my-routes", label: "Личные маршруты" },
         { to: "/planner", label: "Планировщик" },
         { to: "/cabinet", label: "Кабинет", end: true },
@@ -47,22 +47,22 @@ export function Header() {
     <>
       <header className="sticky top-0 z-40 border-b border-[#9bbddd]/50 bg-[#f3f7fb]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f3f7fb]/90">
         <div className="mx-auto w-full max-w-[1600px] px-3 py-3 sm:px-6 lg:px-8">
-          <div className="relative flex items-center gap-3 rounded-2xl border border-[#9bbddd] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(44,71,92,0.08)]">
+          <div className="flex items-center gap-3 rounded-2xl border border-[#9bbddd] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(44,71,92,0.08)]">
             <Link to="/" className="flex min-w-0 items-center gap-3">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f59a23] text-xl font-bold text-white">
                 TB
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-[2rem] leading-none font-bold text-[#2c475c] sm:text-3xl">
+                <span className="block truncate text-xl leading-none font-bold text-[#2c475c] sm:text-3xl">
                   TravelBuddy
                 </span>
-                <span className="block truncate text-sm text-[#588096] sm:text-lg">
+                <span className="block truncate text-[0.72rem] text-[#588096] sm:text-base">
                   Планируй поездки удобно
                 </span>
               </span>
             </Link>
 
-            <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-2 lg:flex">
+            <nav className="hidden flex-1 items-center justify-center gap-2 xl:flex">
               {navLinks.map((item) => (
                 <NavLink
                   key={item.to}
@@ -70,7 +70,7 @@ export function Header() {
                   end={item.end}
                   className={({ isActive }) =>
                     [
-                      "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold transition-colors",
+                      "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors",
                       isActive
                         ? "bg-[#dbe7f3] text-[#2c475c]"
                         : "text-[#4f6a80] hover:bg-[#e8f0f8]",
@@ -86,14 +86,14 @@ export function Header() {
               type="button"
               variant="transparent"
               size="icon-lg"
-              className="ml-auto rounded-2xl border-[#9bbddd] text-[#2c475c] lg:hidden"
+              className="ml-auto rounded-2xl border-[#9bbddd] text-[#2c475c] xl:hidden"
               aria-label="Открыть меню"
               onClick={() => setIsMenuOpen(true)}
             >
               <Menu className="size-6" />
             </Button>
 
-            <div className="ml-auto hidden items-center gap-2 lg:flex">
+            <div className="ml-auto hidden items-center gap-2 xl:flex">
               {isAuthenticated ? (
                 <Button
                   type="button"
@@ -119,7 +119,7 @@ export function Header() {
       </header>
 
       {isMenuOpen ? (
-        <div className="fixed inset-0 z-50 lg:hidden">
+        <div className="fixed inset-0 z-50 xl:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/65 backdrop-blur-[2px]"
@@ -134,10 +134,10 @@ export function Header() {
                   TB
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-[2rem] leading-none font-bold text-[#2c475c]">
+                  <p className="truncate text-2xl leading-none font-bold text-[#2c475c] sm:text-3xl">
                     TravelBuddy
                   </p>
-                  <p className="truncate text-xl text-[#588096]">Меню</p>
+                  <p className="truncate text-base text-[#588096] sm:text-xl">Меню</p>
                 </div>
               </div>
               <Button

@@ -59,6 +59,7 @@ export function RouteCard({
   const normalizedImageUrl = useRouteImageSrc(imageUrl)
   const [imageError, setImageError] = useState(false)
   const hasImage = Boolean(normalizedImageUrl) && !imageError
+  const normalizedAuthor = author.trim() || "Пользователь"
   const routeMetrics =
     metrics ??
     [
@@ -135,7 +136,9 @@ export function RouteCard({
         <h3 className="text-xl leading-tight font-semibold text-foreground sm:text-2xl">
           {title}
         </h3>
-        <p className="mt-1 text-sm text-muted-foreground">Автор: {author}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Автор: {normalizedAuthor}
+        </p>
         {showDescription ? (
           description?.trim() ? (
             <p className="mt-1 min-h-[2.75rem] line-clamp-2 text-sm text-muted-foreground/90">
@@ -153,7 +156,9 @@ export function RouteCard({
         <div
           className={cn(
             "mt-3 grid gap-2",
-            routeMetrics.length >= 3 ? "grid-cols-3" : "grid-cols-2"
+            routeMetrics.length >= 3
+              ? "grid-cols-2 sm:grid-cols-3"
+              : "grid-cols-2"
           )}
         >
           {routeMetrics.map((metric) => (
@@ -172,11 +177,12 @@ export function RouteCard({
         </div>
 
         {showActions ? (
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               type="button"
               variant="orange"
               size="routeCard"
+              className="w-full sm:w-auto"
               onClick={onOpen}
             >
               {primaryActionLabel}
@@ -186,8 +192,8 @@ export function RouteCard({
                 type="button"
                 variant={secondaryActionVariant}
                 size="routeCard"
-                className={secondaryActionClassName}
                 disabled={secondaryActionDisabled}
+                className={cn("w-full sm:w-auto", secondaryActionClassName)}
                 onClick={onSave}
               >
                 {secondaryActionLabel}

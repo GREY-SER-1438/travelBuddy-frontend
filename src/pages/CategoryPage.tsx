@@ -9,6 +9,7 @@ import {
 } from "@/api/saved"
 import { hasAuthToken } from "@/lib/auth"
 import { getRequestError } from "@/lib/get-request-error"
+import { useMeStore } from "@/store/useMeStore"
 import { useRoutesStore } from "@/store/useRoutesStore"
 
 export default function CategoryPage() {
@@ -18,6 +19,8 @@ export default function CategoryPage() {
   const loading = useRoutesStore((state) => state.loading)
   const error = useRoutesStore((state) => state.error)
   const getRoutes = useRoutesStore((state) => state.getRoutes)
+  const me = useMeStore((state) => state.me)
+  const currentUserId = me?.userId ?? null
   const [saveStatuses, setSaveStatuses] = useState<Record<number, "idle" | "saving" | "saved">>({})
 
   useEffect(() => {
@@ -67,6 +70,15 @@ export default function CategoryPage() {
       return
     }
 
+    const route = routes.find((item) => item.routeId === routeId)
+    if (
+      route &&
+      currentUserId !== null &&
+      route.author.userId === currentUserId
+    ) {
+      return
+    }
+
     const status = saveStatuses[routeId] || "idle"
     if (status === "saving") return
 
@@ -91,13 +103,18 @@ export default function CategoryPage() {
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 py-8 sm:px-6 lg:px-8">
-      <section>
-        <h1 className="text-5xl leading-none font-bold text-foreground sm:text-6xl">
-          {title}
-        </h1>
-        <p className="mt-3 text-base text-muted-foreground sm:text-lg">
-          Отдельный экран с маршрутами выбранной категории.
-        </p>
+      <section className="rounded-[26px] border border-border bg-card p-6 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-8">
+        <div>
+          <p className="text-sm font-semibold text-muted-foreground">
+            Просмотр контента
+          </p>
+          <h1 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
+            Категория: {title}
+          </h1>
+          <p className="mt-2 text-base text-muted-foreground sm:text-lg">
+            Просмотр маршрутов выбранной категории.
+          </p>
+        </div>
 
         {loading ? (
           <p className="mt-6 text-sm text-muted-foreground">Загружаем маршруты...</p>
@@ -115,24 +132,21 @@ export default function CategoryPage() {
         ) : null}
 
         {!loading && !error && routes.length > 0 ? (
-          <div className="mt-8 grid gap-4 sm:grid-cols-2">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {routes.map((route) => (
               <RouteCard
                 key={route.routeId}
                 title={route.title}
-                author={route.author.username}
+                author={route.author.username || route.author.email}
                 duration={formatDays(route.durationDays)}
-                secondaryLabel="Категория"
-                secondaryValue={title}
+                secondaryLabel="Тип"
+                secondaryValue={
+                  normalizeVisibility(route.visibility) === "public"
+                    ? "Публичный"
+                    : "Приватный"
+                }
                 imageUrl={route.imageUrl}
-                showDescription={false}
-                tags={["Бюджетно", title]}
-                showFavorite
-                metrics={[
-                  { label: "Длительность", value: formatDays(route.durationDays) },
-                  { label: "Категория", value: title },
-                  { label: "Рейтинг", value: route.isCompleted ? "4.9" : "4.7" },
-                ]}
+                description={route.description}
                 secondaryActionLabel={
                   getRouteSaveStatus(route.routeId) === "saved"
                     ? "Сохранено"
@@ -147,6 +161,12 @@ export default function CategoryPage() {
                 }
                 secondaryActionDisabled={
                   getRouteSaveStatus(route.routeId) === "saving"
+                }
+                showSecondaryAction={
+                  !(
+                    currentUserId !== null &&
+                    route.author.userId === currentUserId
+                  )
                 }
                 onOpen={() => navigate(`/routes/${route.routeId}`)}
                 onSave={() => void onSaveRoute(route.routeId)}
@@ -170,4 +190,8 @@ function formatDays(days: number | null) {
     return `${days} дня`
   }
   return `${days} дней`
+}
+
+function normalizeVisibility(value: string | undefined) {
+  return (value || "").trim().toLowerCase()
 }

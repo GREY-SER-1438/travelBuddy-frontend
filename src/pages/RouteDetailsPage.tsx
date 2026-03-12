@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react"
 import { useLocation, useNavigate, useParams } from "react-router-dom"
 import { useMeStore } from "@/store/useMeStore"
 import { addFavoriteByRouteId } from "@/api/favorites"
@@ -8,6 +8,8 @@ import {
   getRouteById,
   getRoutePointsByRouteId,
   publishRouteById,
+  updateRouteById,
+  uploadRouteImage,
 } from "@/api/routes"
 import {
   deleteRoutePointById,
@@ -40,13 +42,18 @@ export default function RouteDetailsPage() {
   const [reviewRating, setReviewRating] = useState(5)
   const [reviewComment, setReviewComment] = useState("")
   const [pointDrafts, setPointDrafts] = useState<
-    Record<number, { position: number; country: string; city: string; description: string }>
+    Record<number, { country: string; city: string; description: string }>
   >({})
   const [newPoint, setNewPoint] = useState({
     country: "",
     city: "",
     description: "",
   })
+  const [routeTitleDraft, setRouteTitleDraft] = useState("")
+  const [routeDescriptionDraft, setRouteDescriptionDraft] = useState("")
+  const [routeDurationDaysDraft, setRouteDurationDaysDraft] = useState("")
+  const [routeImageFile, setRouteImageFile] = useState<File | null>(null)
+  const routeImageInputRef = useRef<HTMLInputElement | null>(null)
   const me = useMeStore((state) => state.me)
 
   useEffect(() => {
@@ -78,7 +85,6 @@ export default function RouteDetailsPage() {
             pointsData.map((point) => [
               point.pointId,
               {
-                position: point.position,
                 country: point.country,
                 city: point.city,
                 description: point.description || "",
@@ -104,6 +110,22 @@ export default function RouteDetailsPage() {
     }
   }, [numericRouteId])
 
+  useEffect(() => {
+    if (!route) return
+
+    setRouteTitleDraft(route.title || "")
+    setRouteDescriptionDraft(route.description || "")
+    setRouteDurationDaysDraft(
+      typeof route.durationDays === "number" && route.durationDays > 0
+        ? String(route.durationDays)
+        : ""
+    )
+    setRouteImageFile(null)
+    if (routeImageInputRef.current) {
+      routeImageInputRef.current.value = ""
+    }
+  }, [route?.routeId])
+
   const currentUserId = resolveUserId(me)
   const routeAuthorId = route ? resolveUserId(route.author) : null
   const isOwner = Boolean(
@@ -115,14 +137,10 @@ export default function RouteDetailsPage() {
         (me.email && route.author.email && me.email === route.author.email))
   )
   const normalizedVisibility = normalizeVisibility(route?.visibility)
-  const isOwnerByContext = isOwner || isPersonalRoutePage
-  const canPublish = Boolean(
-    route && isOwnerByContext && normalizedVisibility !== "public"
-  )
-  const canFavorite = Boolean(
-    route && !isOwnerByContext && normalizedVisibility === "public"
-  )
-  const canReview = Boolean(route && !isOwnerByContext && normalizedVisibility === "public")
+  const canManageOwnRoute = Boolean(route && isOwner && isPersonalRoutePage)
+  const canPublish = Boolean(route && isOwner && normalizedVisibility !== "public")
+  const canFavorite = Boolean(route && !isOwner && normalizedVisibility === "public")
+  const canReview = Boolean(route && !isOwner && normalizedVisibility === "public")
   const hasCurrentUserReview = reviews.some((review) => {
     if (!me || !review.user) return false
     if (
@@ -147,7 +165,6 @@ export default function RouteDetailsPage() {
     return Boolean(me.email && review.user.email && me.email === review.user.email)
   })
   const reviewFormDisabled = hasCurrentUserReview || actionLoading
-  const canManageOwnRoute = Boolean(route && isOwnerByContext && isPersonalRoutePage)
   const nextPointPosition = useMemo(() => getNextPointPosition(points), [points])
   const coverImageUrl = useRouteImageSrc(route?.imageUrl)
 
@@ -186,6 +203,80 @@ export default function RouteDetailsPage() {
       setRoute(updatedRoute)
       setActionIsError(false)
       setActionMessage("Маршрут опубликован.")
+    } catch (requestError) {
+      setActionIsError(true)
+      setActionMessage(getRequestError(requestError))
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const onRouteImageChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) {
+      setRouteImageFile(null)
+      return
+    }
+    if (!file.type.startsWith("image/")) {
+      setActionIsError(true)
+      setActionMessage("Можно загрузить только изображение.")
+      event.target.value = ""
+      setRouteImageFile(null)
+      return
+    }
+    setRouteImageFile(file)
+  }
+
+  const onUpdateRoute = async () => {
+    if (!route || !canManageOwnRoute) return
+
+    const normalizedTitle = routeTitleDraft.trim()
+    if (!normalizedTitle) {
+      setActionIsError(true)
+      setActionMessage("Название маршрута не может быть пустым.")
+      return
+    }
+
+    const durationText = routeDurationDaysDraft.trim()
+    const parsedDuration = durationText ? Number(durationText) : undefined
+    if (
+      durationText &&
+      (
+        typeof parsedDuration !== "number" ||
+        !Number.isInteger(parsedDuration) ||
+        parsedDuration < 1 ||
+        parsedDuration > 365
+      )
+    ) {
+      setActionIsError(true)
+      setActionMessage("Длительность должна быть числом от 1 до 365.")
+      return
+    }
+
+    setActionLoading(true)
+    setActionMessage("")
+    setActionIsError(false)
+    try {
+      let nextImageUrl = route.imageUrl || undefined
+      if (routeImageFile) {
+        const uploaded = await uploadRouteImage(routeImageFile)
+        nextImageUrl = uploaded.imageUrl
+      }
+
+      const updatedRoute = await updateRouteById(route.routeId, {
+        title: normalizedTitle,
+        description: routeDescriptionDraft.trim() || undefined,
+        durationDays: parsedDuration,
+        imageUrl: nextImageUrl,
+      })
+
+      setRoute(updatedRoute)
+      setRouteImageFile(null)
+      if (routeImageInputRef.current) {
+        routeImageInputRef.current.value = ""
+      }
+      setActionIsError(false)
+      setActionMessage("Маршрут обновлен.")
     } catch (requestError) {
       setActionIsError(true)
       setActionMessage(getRequestError(requestError))
@@ -239,14 +330,14 @@ export default function RouteDetailsPage() {
 
   const onChangePointField = (
     pointId: number,
-    field: "position" | "country" | "city" | "description",
+    field: "country" | "city" | "description",
     value: string
   ) => {
     setPointDrafts((prev) => ({
       ...prev,
       [pointId]: {
         ...prev[pointId],
-        [field]: field === "position" ? Number(value) || 1 : value,
+        [field]: value,
       },
     }))
   }
@@ -265,7 +356,6 @@ export default function RouteDetailsPage() {
     setActionIsError(false)
     try {
       const updatedPoint = await updateRoutePointById(pointId, {
-        position: draft.position,
         country: draft.country.trim(),
         city: draft.city.trim(),
         description: draft.description.trim() || undefined,
@@ -276,7 +366,6 @@ export default function RouteDetailsPage() {
       setPointDrafts((prev) => ({
         ...prev,
         [pointId]: {
-          position: updatedPoint.position,
           country: updatedPoint.country,
           city: updatedPoint.city,
           description: updatedPoint.description || "",
@@ -336,7 +425,6 @@ export default function RouteDetailsPage() {
       setPointDrafts((prev) => ({
         ...prev,
         [createdPoint.pointId]: {
-          position: createdPoint.position,
           country: createdPoint.country,
           city: createdPoint.city,
           description: createdPoint.description || "",
@@ -449,8 +537,8 @@ export default function RouteDetailsPage() {
           </div>
         </section>
 
-        <div className={isPersonalRoutePage ? "grid gap-4" : "grid gap-4 lg:grid-cols-2"}>
-          {!isPersonalRoutePage ? (
+        <div className={canManageOwnRoute ? "grid gap-4" : "grid gap-4 lg:grid-cols-2"}>
+          {!canManageOwnRoute ? (
             <section className="rounded-[30px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-5">
               <p className="text-sm font-semibold text-muted-foreground">Описание</p>
               <h2 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
@@ -459,6 +547,63 @@ export default function RouteDetailsPage() {
               <p className="mt-3 text-sm text-muted-foreground sm:text-base">
                 Длительность: {formatDays(route.durationDays)}
               </p>
+            </section>
+          ) : null}
+
+          {canManageOwnRoute ? (
+            <section className="rounded-[30px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-5">
+              <p className="text-sm font-semibold text-muted-foreground">
+                Редактирование маршрута
+              </p>
+              <h2 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
+                Основные данные
+              </h2>
+
+              <div className="mt-4 space-y-2.5">
+                <input
+                  type="text"
+                  value={routeTitleDraft}
+                  onChange={(event) => setRouteTitleDraft(event.target.value)}
+                  placeholder="Название маршрута"
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <textarea
+                  rows={4}
+                  value={routeDescriptionDraft}
+                  onChange={(event) => setRouteDescriptionDraft(event.target.value)}
+                  placeholder="Описание маршрута"
+                  className="w-full resize-none rounded-xl border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <input
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={routeDurationDaysDraft}
+                  onChange={(event) => setRouteDurationDaysDraft(event.target.value)}
+                  placeholder="Длительность в днях"
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                />
+                <input
+                  ref={routeImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={onRouteImageChange}
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 py-2 text-sm text-foreground file:mr-3 file:rounded-xl file:border-0 file:bg-muted file:px-3 file:py-1 file:text-sm file:font-semibold file:text-foreground/85"
+                />
+                <p className="text-xs text-muted-foreground">
+                  {routeImageFile
+                    ? `Выбран файл: ${routeImageFile.name}`
+                    : "Можно оставить текущее фото без изменений"}
+                </p>
+                <Button
+                  variant="orange"
+                  size="headerAuth"
+                  disabled={actionLoading}
+                  onClick={() => void onUpdateRoute()}
+                >
+                  Сохранить маршрут
+                </Button>
+              </div>
             </section>
           ) : null}
 
@@ -484,20 +629,10 @@ export default function RouteDetailsPage() {
                   >
                     {canManageOwnRoute ? (
                       <div className="space-y-2">
-                        <div className="grid gap-2 sm:grid-cols-[100px_1fr_1fr]">
-                          <input
-                            type="number"
-                            min={1}
-                            value={pointDrafts[point.pointId]?.position ?? point.position}
-                            onChange={(event) =>
-                              onChangePointField(
-                                point.pointId,
-                                "position",
-                                event.target.value
-                              )
-                            }
-                            className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
-                          />
+                        <p className="text-sm text-muted-foreground">
+                          Точка маршрута №{point.position}
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
                           <input
                             type="text"
                             value={pointDrafts[point.pointId]?.country ?? point.country}
@@ -571,7 +706,7 @@ export default function RouteDetailsPage() {
                   Добавить точку
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Номер точки:{" "}
+                  Следующая точка получит номер автоматически:{" "}
                   <span className="font-semibold text-foreground">
                     {nextPointPosition}
                   </span>
@@ -618,7 +753,7 @@ export default function RouteDetailsPage() {
           </section>
         </div>
 
-        {!isPersonalRoutePage ? (
+        {!canManageOwnRoute ? (
           <section className="rounded-[30px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)] sm:p-5">
             <p className="text-sm font-semibold text-muted-foreground">Отзывы</p>
             <h2 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">

@@ -4,10 +4,12 @@ import { RouteCard } from "@/components/route-card"
 import { Button } from "@/components/ui/button"
 import { createCategory, getCategories } from "@/api/categories"
 import { getFavorites, removeFavoriteByRouteId } from "@/api/favorites"
+import { getAccountReport } from "@/api/reports"
 import { getSavedRoutes, removeSavedRouteById } from "@/api/saved"
 import type {
   CategoryResponseDto,
   FavoriteResponseDto,
+  ReportFormat,
   SavedRouteResponseDto,
 } from "@/api/types"
 import { getCurrentUserProfile, updateUserById } from "@/api/users"
@@ -20,6 +22,7 @@ export default function CabinetPage() {
   const [message, setMessage] = useState("")
   const [userId, setUserId] = useState<number | null>(null)
   const [username, setUsername] = useState("")
+  const [hasProfileUsername, setHasProfileUsername] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [savedRoutes, setSavedRoutes] = useState<SavedRouteResponseDto[]>([])
@@ -28,6 +31,11 @@ export default function CabinetPage() {
   const [newCategoryName, setNewCategoryName] = useState("")
   const [savingProfile, setSavingProfile] = useState(false)
   const [creatingCategory, setCreatingCategory] = useState(false)
+  const [downloadingReport, setDownloadingReport] = useState<ReportFormat | null>(
+    null
+  )
+  const [reportError, setReportError] = useState("")
+  const [reportMessage, setReportMessage] = useState("")
 
   useEffect(() => {
     let cancelled = false
@@ -36,12 +44,13 @@ export default function CabinetPage() {
       setLoading(true)
       setRequestError("")
       try {
-        const [profile, saved, favoritesList, categoriesList] = await Promise.all([
-          getCurrentUserProfile(),
-          getSavedRoutes(),
-          getFavorites(),
-          getCategories(),
-        ])
+        const [profile, saved, favoritesList, categoriesList] =
+          await Promise.all([
+            getCurrentUserProfile(),
+            getSavedRoutes(),
+            getFavorites(),
+            getCategories(),
+          ])
 
         if (cancelled) return
 
@@ -54,8 +63,14 @@ export default function CabinetPage() {
           return visibility === "public" && !isOwnRoute
         })
 
+        const normalizedProfileUsername = (profile.username || "").trim()
+
         setUserId(profile.userId)
-        setUsername(profile.username || "")
+        setHasProfileUsername(Boolean(normalizedProfileUsername))
+        setUsername(
+          normalizedProfileUsername ||
+            getDisplayUsername(undefined, profile.email)
+        )
         setEmail(profile.email || "")
         setSavedRoutes(saved)
         setFavorites(normalizedFavorites)
@@ -86,12 +101,24 @@ export default function CabinetPage() {
     setRequestError("")
     setMessage("")
     try {
+      const normalizedUsername = username.trim()
+      const emailFallbackUsername = getDisplayUsername(undefined, email)
+      const shouldSendUsername =
+        hasProfileUsername || normalizedUsername !== emailFallbackUsername
+
       const updated = await updateUserById(userId, {
-        username: username.trim() || undefined,
+        username: shouldSendUsername
+          ? normalizedUsername || undefined
+          : undefined,
         email: email.trim() || undefined,
         password: password.trim() || undefined,
       })
-      setUsername(updated.username || username)
+      const normalizedUpdatedUsername = (updated.username || "").trim()
+      const nextEmail = updated.email || email
+      setHasProfileUsername(Boolean(normalizedUpdatedUsername))
+      setUsername(
+        normalizedUpdatedUsername || getDisplayUsername(undefined, nextEmail)
+      )
       setEmail(updated.email || email)
       setPassword("")
       setMessage("Профиль обновлен.")
@@ -130,7 +157,9 @@ export default function CabinetPage() {
     setMessage("")
     try {
       await removeSavedRouteById(routeId)
-      setSavedRoutes((prev) => prev.filter((item) => item.route.routeId !== routeId))
+      setSavedRoutes((prev) =>
+        prev.filter((item) => item.route.routeId !== routeId)
+      )
       setMessage("Маршрут удален из сохраненных.")
     } catch (error) {
       setRequestError(getRequestError(error))
@@ -142,10 +171,29 @@ export default function CabinetPage() {
     setMessage("")
     try {
       await removeFavoriteByRouteId(routeId)
-      setFavorites((prev) => prev.filter((item) => item.route.routeId !== routeId))
+      setFavorites((prev) =>
+        prev.filter((item) => item.route.routeId !== routeId)
+      )
       setMessage("Маршрут удален из избранного.")
     } catch (error) {
       setRequestError(getRequestError(error))
+    }
+  }
+
+  const onDownloadReport = async (format: ReportFormat) => {
+    if (downloadingReport) return
+
+    setDownloadingReport(format)
+    setReportError("")
+    setReportMessage("")
+    try {
+      const report = await getAccountReport(format)
+      downloadFile(report.blob, report.filename)
+      setReportMessage(`Отчет ${format.toUpperCase()} успешно загружен.`)
+    } catch (error) {
+      setReportError(getRequestError(error))
+    } finally {
+      setDownloadingReport(null)
     }
   }
 
@@ -176,14 +224,15 @@ export default function CabinetPage() {
                 placeholder="Имя"
                 value={username}
                 onChange={(event) => setUsername(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                autoComplete="username"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
               />
               <input
                 type="email"
                 placeholder="Email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
               />
             </div>
 
@@ -192,7 +241,7 @@ export default function CabinetPage() {
               placeholder="Новый пароль (опционально)"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+              className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
             />
 
             <Button
@@ -208,26 +257,54 @@ export default function CabinetPage() {
           {requestError ? (
             <p className="mt-2 text-sm text-destructive">{requestError}</p>
           ) : null}
-          {message ? <p className="mt-2 text-sm text-emerald-700">{message}</p> : null}
+          {message ? (
+            <p className="mt-2 text-sm text-emerald-700">{message}</p>
+          ) : null}
         </section>
 
         <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-          <p className="text-sm font-semibold text-muted-foreground">Переходы</p>
-          <h2 className="mt-1 text-4xl leading-none font-bold text-foreground sm:text-5xl">
-            Быстрый доступ
+          <h2 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
+            Отчет по аккаунту
           </h2>
+          <p className="mt-2 text-sm text-muted-foreground sm:text-base">
+            Выберите формат и скачайте отчет.
+          </p>
+
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button asChild variant="orange" className="h-10 rounded-xl px-4 text-sm font-semibold">
-              <Link to="/cabinet/my-routes">Личные маршруты</Link>
+            <Button
+              type="button"
+              variant="orange"
+              disabled={Boolean(downloadingReport)}
+              onClick={() => void onDownloadReport("html")}
+              className="h-10 rounded-xl px-4 text-sm font-semibold"
+            >
+              {downloadingReport === "html"
+                ? "Готовим HTML..."
+                : "Скачать HTML"}
             </Button>
-            <Button asChild variant="transparent" className="h-10 rounded-xl px-4 text-sm font-semibold">
-              <Link to="/cabinet/saved">Сохраненные маршруты</Link>
+            <Button
+              type="button"
+              variant="transparent"
+              disabled={Boolean(downloadingReport)}
+              onClick={() => void onDownloadReport("xml")}
+              className="h-10 rounded-xl px-4 text-sm font-semibold"
+            >
+              {downloadingReport === "xml" ? "Готовим XML..." : "Скачать XML"}
             </Button>
           </div>
+
+          {reportError ? (
+            <p className="mt-2 text-sm text-destructive">{reportError}</p>
+          ) : null}
+          {reportMessage ? (
+            <p className="mt-2 text-sm text-emerald-700">{reportMessage}</p>
+          ) : null}
         </section>
 
         <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-          <p className="text-sm font-semibold text-muted-foreground">Сохраненное</p>
+          <p className="text-sm font-semibold text-muted-foreground">
+            Сохраненное
+          </p>
           <h2 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
             Сохраненные маршруты
           </h2>
@@ -263,7 +340,9 @@ export default function CabinetPage() {
         </section>
 
         <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-          <p className="text-sm font-semibold text-muted-foreground">Избранное</p>
+          <p className="text-sm font-semibold text-muted-foreground">
+            Избранное
+          </p>
           <h2 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
             Избранные маршруты
           </h2>
@@ -296,14 +375,18 @@ export default function CabinetPage() {
         </section>
 
         <section className="rounded-[22px] border border-border bg-card p-4 shadow-[0_12px_24px_rgba(44,71,92,0.08)]">
-          <p className="text-sm font-semibold text-muted-foreground">Коллекции</p>
+          <p className="text-sm font-semibold text-muted-foreground">
+            Коллекции
+          </p>
           <h2 className="mt-1 text-5xl leading-none font-bold text-foreground sm:text-6xl">
             Мои категории маршрутов
           </h2>
 
           <div className="mt-4 space-y-2.5">
             {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Категорий пока нет.</p>
+              <p className="text-sm text-muted-foreground">
+                Категорий пока нет.
+              </p>
             ) : null}
             {categories.map((category) => (
               <CategoryRow
@@ -315,13 +398,16 @@ export default function CabinetPage() {
             ))}
           </div>
 
-          <form className="mt-3 flex flex-wrap gap-2" onSubmit={onCreateCategory}>
+          <form
+            className="mt-3 flex flex-wrap gap-2"
+            onSubmit={onCreateCategory}
+          >
             <input
               type="text"
-              placeholder="Название подборки"
+              placeholder="Название категории"
               value={newCategoryName}
               onChange={(event) => setNewCategoryName(event.target.value)}
-              className="h-10 min-w-[230px] flex-1 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+              className="h-10 min-w-[230px] flex-1 rounded-xl border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground/80 focus:border-ring focus:ring-2 focus:ring-ring/20 focus:outline-none"
             />
             <Button
               type="submit"
@@ -329,7 +415,7 @@ export default function CabinetPage() {
               disabled={creatingCategory}
               className="h-10 rounded-xl px-5 text-sm font-semibold"
             >
-              Создать подборку
+              Создать категорию
             </Button>
           </form>
         </section>
@@ -353,7 +439,11 @@ function CategoryRow({
         <h3 className="text-sm font-semibold text-foreground">{name}</h3>
         <p className="text-xs text-muted-foreground">{count}</p>
       </div>
-      <Button asChild variant="transparent" className="h-8 rounded-xl px-3 text-sm font-semibold">
+      <Button
+        asChild
+        variant="transparent"
+        className="h-8 rounded-xl px-3 text-sm font-semibold"
+      >
         <Link to={href}>Открыть</Link>
       </Button>
     </article>
@@ -379,4 +469,29 @@ function normalizeVisibility(value: string | undefined) {
 
 function getVisibilityLabel(value: string | undefined) {
   return normalizeVisibility(value) === "public" ? "Публичный" : "Приватный"
+}
+
+function getDisplayUsername(
+  username: string | undefined,
+  email: string | undefined
+) {
+  const normalizedUsername = (username || "").trim()
+  if (normalizedUsername) return normalizedUsername
+
+  const normalizedEmail = (email || "").trim()
+  if (!normalizedEmail) return ""
+
+  const [localPart] = normalizedEmail.split("@")
+  return localPart || normalizedEmail
+}
+
+function downloadFile(blob: Blob, filename: string) {
+  const fileUrl = window.URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = fileUrl
+  link.download = filename || "account-report"
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(fileUrl)
 }
