@@ -17,7 +17,7 @@ const accountLinks = ["Вход", "Регистрация"]
 
 export function Footer() {
   return (
-    <footer className="mt-auto bg-primary text-primary-foreground">
+    <footer className="mt-auto bg-[#2c475c] text-[#fbfbfd] dark:bg-[#14222d] dark:text-[#e9f1fd]">
       <div className="mx-auto w-full max-w-[1280px] px-4 py-12 sm:px-6 sm:py-14 lg:px-8">
         <div className="grid gap-8 md:grid-cols-[minmax(280px,1.4fr)_1fr_1fr_0.8fr] md:gap-10">
           <div>
@@ -29,13 +29,13 @@ export function Footer() {
                 <span className="block text-xl leading-none font-semibold tracking-[-0.02em] sm:text-2xl">
                   TravelBuddy
                 </span>
-                <span className="mt-1 block text-xs leading-none text-primary-foreground/65 sm:text-sm">
+                <span className="mt-1 block text-xs leading-none text-[#d3e2ee]/75 dark:text-[#b8d1e4]/80 sm:text-sm">
                   Планируй поездки удобно
                 </span>
               </span>
             </Link>
 
-            <p className="mt-7 max-w-[430px] text-sm leading-6 text-primary-foreground/75 sm:text-base">
+            <p className="mt-7 max-w-[430px] text-sm leading-6 text-[#d3e2ee]/85 dark:text-[#b8d1e4]/85 sm:text-base">
               Удобный сервис для планирования поездок, хранения маршрутов,
               публикации идей и отслеживания истории путешествий.
             </p>
@@ -46,8 +46,8 @@ export function Footer() {
           <FooterColumn title="Аккаунт" links={accountLinks} />
         </div>
 
-        <div className="mt-12 border-t border-primary-foreground/15 pt-7">
-          <div className="flex flex-col gap-3 text-xs text-primary-foreground/65 sm:text-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="mt-12 border-t border-[#d3e2ee]/25 dark:border-[#8db5d6]/25 pt-7">
+          <div className="flex flex-col gap-3 text-xs text-[#d3e2ee]/75 dark:text-[#b8d1e4]/80 sm:text-sm lg:flex-row lg:items-center lg:justify-between">
             <p>© 2026 TravelBuddy. Все права защищены.</p>
             <p>Политика конфиденциальности · Пользовательское соглашение</p>
           </div>
@@ -68,7 +68,7 @@ function FooterColumn({ title, links }: { title: string; links: string[] }) {
           <li key={label}>
             <Link
               to="/"
-              className="text-sm text-primary-foreground/70 transition-colors hover:text-primary-foreground"
+              className="text-sm text-[#d3e2ee]/80 transition-colors hover:text-white dark:text-[#b8d1e4]/85 dark:hover:text-[#fbfbfd]"
             >
               {label}
             </Link>

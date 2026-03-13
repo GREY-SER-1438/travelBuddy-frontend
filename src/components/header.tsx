@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
-import { Menu, X } from "lucide-react"
+import { Menu, Moon, Sun, X } from "lucide-react"
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom"
 import { logoutUser } from "@/api/auth"
+import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { hasAuthToken } from "@/lib/auth"
 
@@ -10,6 +11,19 @@ export function Header() {
   const location = useLocation()
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const isAuthenticated = hasAuthToken()
+  const { theme, setTheme } = useTheme()
+
+  const resolvedTheme =
+    theme === "system"
+      ? window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light"
+      : theme
+  const isDark = resolvedTheme === "dark"
+
+  const toggleTheme = () => {
+    setTheme(isDark ? "light" : "dark")
+  }
 
   const navLinks = isAuthenticated
     ? [
@@ -45,18 +59,18 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 border-b border-[#9bbddd]/50 bg-[#f3f7fb]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f3f7fb]/90">
+      <header className="sticky top-0 z-40 border-b border-[#9bbddd]/50 bg-[#f3f7fb]/95 backdrop-blur supports-[backdrop-filter]:bg-[#f3f7fb]/90 dark:border-[#588096]/40 dark:bg-[#1e2f3c]/95 dark:supports-[backdrop-filter]:bg-[#1e2f3c]/90">
         <div className="mx-auto w-full max-w-[1600px] px-3 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3 rounded-2xl border border-[#9bbddd] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(44,71,92,0.08)]">
+          <div className="flex items-center gap-3 rounded-2xl border border-[#9bbddd] bg-white px-4 py-3 shadow-[0_8px_24px_rgba(44,71,92,0.08)] dark:border-[#588096]/50 dark:bg-[#243847] dark:shadow-[0_8px_24px_rgba(0,0,0,0.3)]">
             <Link to="/" className="flex min-w-0 items-center gap-3">
               <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f59a23] text-xl font-bold text-white">
                 TB
               </span>
               <span className="min-w-0">
-                <span className="block truncate text-xl leading-none font-bold text-[#2c475c] sm:text-3xl">
+                <span className="block truncate text-xl leading-none font-bold text-[#2c475c] dark:text-[#fbfbfd] sm:text-3xl">
                   TravelBuddy
                 </span>
-                <span className="block truncate text-[0.72rem] text-[#588096] sm:text-base">
+                <span className="block truncate text-[0.72rem] text-[#588096] dark:text-[#8db5d6] sm:text-base">
                   Планируй поездки удобно
                 </span>
               </span>
@@ -72,8 +86,8 @@ export function Header() {
                     [
                       "inline-flex h-9 items-center rounded-full px-4 text-sm font-semibold whitespace-nowrap transition-colors",
                       isActive
-                        ? "bg-[#dbe7f3] text-[#2c475c]"
-                        : "text-[#4f6a80] hover:bg-[#e8f0f8]",
+                        ? "bg-[#dbe7f3] text-[#2c475c] dark:bg-[#35556b] dark:text-[#fbfbfd]"
+                        : "text-[#4f6a80] hover:bg-[#e8f0f8] dark:text-[#c8dded] dark:hover:bg-[#35556b]",
                     ].join(" ")
                   }
                 >
@@ -86,7 +100,18 @@ export function Header() {
               type="button"
               variant="transparent"
               size="icon-lg"
-              className="ml-auto rounded-2xl border-[#9bbddd] text-[#2c475c] xl:hidden"
+              className="ml-auto rounded-2xl border-[#9bbddd] text-[#2c475c] dark:border-[#588096] dark:text-[#e9f1fd] xl:hidden"
+              aria-label={isDark ? "Включить светлую тему" : "Включить темную тему"}
+              onClick={toggleTheme}
+            >
+              {isDark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+
+            <Button
+              type="button"
+              variant="transparent"
+              size="icon-lg"
+              className="rounded-2xl border-[#9bbddd] text-[#2c475c] dark:border-[#588096] dark:text-[#e9f1fd] xl:hidden"
               aria-label="Открыть меню"
               onClick={() => setIsMenuOpen(true)}
             >
@@ -94,6 +119,17 @@ export function Header() {
             </Button>
 
             <div className="ml-auto hidden items-center gap-2 xl:flex">
+              <Button
+                type="button"
+                variant="transparent"
+                size="headerAuth"
+                className="border-[#9bbddd] text-[#2c475c] dark:border-[#588096] dark:text-[#e9f1fd]"
+                aria-label={isDark ? "Включить светлую тему" : "Включить темную тему"}
+                onClick={toggleTheme}
+              >
+                {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                {isDark ? "Светлая" : "Тёмная"}
+              </Button>
               {isAuthenticated ? (
                 <Button
                   type="button"
@@ -127,17 +163,17 @@ export function Header() {
             onClick={() => setIsMenuOpen(false)}
           />
 
-          <aside className="absolute inset-y-0 right-0 flex w-[min(88vw,420px)] flex-col overflow-hidden border-l border-[#9bbddd] bg-[#f5f7fb] shadow-[-16px_0_40px_rgba(0,0,0,0.35)]">
+          <aside className="absolute inset-y-0 right-0 flex w-[min(88vw,420px)] flex-col overflow-hidden border-l border-[#9bbddd] bg-[#f5f7fb] shadow-[-16px_0_40px_rgba(0,0,0,0.35)] dark:border-[#588096]/50 dark:bg-[#243847]">
             <div className="flex items-center justify-between px-4 py-4">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-[#f59a23] text-xl font-bold text-white">
                   TB
                 </span>
                 <div className="min-w-0">
-                  <p className="truncate text-2xl leading-none font-bold text-[#2c475c] sm:text-3xl">
+                  <p className="truncate text-2xl leading-none font-bold text-[#2c475c] dark:text-[#fbfbfd] sm:text-3xl">
                     TravelBuddy
                   </p>
-                  <p className="truncate text-base text-[#588096] sm:text-xl">Меню</p>
+                  <p className="truncate text-base text-[#588096] dark:text-[#8db5d6] sm:text-xl">Меню</p>
                 </div>
               </div>
               <Button
@@ -155,6 +191,17 @@ export function Header() {
             <div className="h-px w-full bg-[#9bbddd]/70" />
 
             <div className="flex h-full flex-col px-4 pt-4 pb-5">
+              <Button
+                type="button"
+                variant="transparent"
+                size="headerAuth"
+                className="mb-3 w-full justify-center border-[#9bbddd] text-[#2c475c] dark:border-[#588096] dark:text-[#e9f1fd]"
+                aria-label={isDark ? "Включить светлую тему" : "Включить темную тему"}
+                onClick={toggleTheme}
+              >
+                {isDark ? <Sun className="size-4" /> : <Moon className="size-4" />}
+                {isDark ? "Светлая тема" : "Тёмная тема"}
+              </Button>
               <nav className="space-y-2">
                 {navLinks.map((item) => (
                   <Button
